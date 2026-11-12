@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>سینا OS — کنسول</title>
+<style>
+  :root{
+    --bg:#070a0f; --panel:#0e141d; --panel2:#121a24; --line:rgba(255,255,255,.07);
+    --txt:#e5e7eb; --dim:#93a0b4; --brand:#6366f1; --brand2:#06b6d4;
+    --ok:#34d399; --warn:#fbbf24; --err:#fb7185;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:
+    radial-gradient(1100px 560px at 100% -10%, rgba(99,102,241,.13), transparent 60%),
+    radial-gradient(900px 480px at -10% 110%, rgba(6,182,212,.10), transparent 60%), var(--bg);
+    color:var(--txt);font-family:Vazirmatn,IRANSans,Tahoma,system-ui,sans-serif;min-height:100vh}
+  a{color:#a5b4fc}
+  .row{display:flex;gap:12px}
+  .grid{display:grid;gap:14px}
+  .card{background:rgba(14,20,29,.86);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:rgba(255,255,255,.05);
+    color:var(--txt);border-radius:12px;padding:8px 14px;font:inherit;font-size:13px;cursor:pointer;transition:.15s}
+  .btn:hover{background:rgba(255,255,255,.1)}
+  .btn.primary{background:linear-gradient(270deg,var(--brand),var(--brand2));border:0;color:#fff;font-weight:600}
+  .btn.danger{background:rgba(251,113,133,.15);border-color:rgba(251,113,133,.35);color:#fda4af}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .input,textarea,select{width:100%;background:#0b1017;border:1px solid var(--line);border-radius:12px;
+    color:var(--txt);padding:10px 12px;font:inherit;font-size:13px}
+  .input:focus,textarea:focus{outline:0;border-color:rgba(99,102,241,.6);box-shadow:0 0 0 3px rgba(99,102,241,.15)}
+  .label{display:block;font-size:11.5px;color:var(--dim);margin:0 0 5px}
+  .chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 10px;font-size:11px}
+  .muted{color:var(--dim);font-size:12px}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.9}
+  /* layout */
+  #shell{display:none;min-height:100vh}
+  aside{position:fixed;inset-block:0;inset-inline-end:0;width:232px;background:rgba(11,16,23,.96);
+    border-left:1px solid var(--line);display:flex;flex-direction:column;z-index:20}
+  .brand{display:flex;align-items:center;gap:10px;padding:16px;border-bottom:1px solid var(--line)}
+  .logo{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;
+    background:linear-gradient(135deg,var(--brand),var(--brand2));font-size:18px}
+  nav{padding:10px;overflow:auto;flex:1}
+  nav button{display:flex;width:100%;align-items:center;gap:10px;background:none;border:0;color:var(--dim);
+    padding:10px 12px;border-radius:12px;font:inherit;font-size:13px;cursor:pointer;text-align:right}
+  nav button:hover{background:rgba(255,255,255,.05);color:#e2e8f0}
+  nav button.active{background:linear-gradient(270deg,rgba(99,102,241,.24),rgba(6,182,212,.10));color:#fff}
+  .who{padding:12px;border-top:1px solid var(--line);font-size:12px}
+  main{margin-inline-end:232px;padding:20px 26px 60px}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  h1{font-size:19px;margin:0}
+  .sub{color:var(--dim);font-size:12px;margin-top:4px}
+  /* login */
+  #login{display:grid;place-items:center;min-height:100vh;padding:20px}
+  #login .card{width:min(420px,100%)}
+  /* chat */
+  .msgs{display:flex;flex-direction:column;gap:12px;max-height:56vh;overflow:auto;padding:4px}
+  .msg{border-radius:14px;padding:12px 14px;font-size:13.5px;line-height:1.95;white-space:pre-wrap;word-break:break-word}
+  .msg.user{background:rgba(99,102,241,.16);border:1px solid rgba(99,102,241,.25);align-self:flex-start;max-width:86%}
+  .msg.bot{background:rgba(255,255,255,.04);border:1px solid var(--line);max-width:96%}
+  .step{font-size:12px;color:var(--dim);border-right:2px solid rgba(99,102,241,.35);padding:2px 10px;margin:2px 0}
+  .tool{font-size:11.5px;color:#c7d2fe;background:rgba(99,102,241,.08);border-radius:8px;padding:4px 8px;margin:2px 0}
+  .composer{display:flex;gap:8px;margin-top:14px}
+  .composer textarea{min-height:64px;resize:vertical}
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{color:var(--dim);font-weight:500;font-size:11px;text-align:right;padding:8px 10px;border-bottom:1px solid var(--line)}
+  td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.04)}
+  /* modal */
+  #modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:50;padding:18px}
+  #modal .card{width:min(560px,100%);max-height:86vh;overflow:auto}
+  .prov{border:1px solid var(--line);border-radius:14px;padding:12px;background:rgba(255,255,255,.02);cursor:pointer;transition:.15s}
+  .prov:hover{border-color:rgba(99,102,241,.45);background:rgba(99,102,241,.07)}
+  .prov.on{border-color:rgba(52,211,153,.45);background:rgba(52,211,153,.07)}
+  .toast{position:fixed;inset-block-end:18px;inset-inline-start:18px;background:#111827;border:1px solid var(--line);
+    border-radius:12px;padding:10px 14px;font-size:12.5px;z-index:80;display:none}
+  @media(max-width:820px){
+    aside{transform:translateX(100%);transition:.2s} aside.open{transform:none}
+    main{margin-inline-end:0;padding:16px}
+  }
+</style>
+</head>
+<body>
+
+<!-- ورود -->
+<div id="login">
+  <div class="card">
+    <div style="text-align:center;margin-bottom:18px">
+      <div class="logo" style="margin:0 auto 10px;width:52px;height:52px;border-radius:18px;font-size:26px">⚡</div>
+      <h1>سینا OS</h1>
+      <p class="sub">عامل هوشمند خودمختار — نسخهٔ متن‌باز</p>
+    </div>
+    <div class="grid">
+      <div><label class="label">ایمیل</label><input id="li-email" class="input" dir="ltr" value="admin@sina.local"></div>
+      <div><label class="label">رمز عبور</label><input id="li-pass" class="input" dir="ltr" type="password" placeholder="رمز ساخته‌شده هنگام نصب"></div>
+      <p id="li-err" class="muted" style="color:#fda4af;display:none"></p>
+      <button class="btn primary" id="li-btn" style="justify-content:center;padding:11px">ورود</button>
+      <p class="muted" style="text-align:center">رمز اولیه در فایل <span class="mono">backend/.env</span> است (ADMIN_PASSWORD)</p>
+    </div>
+  </div>
+</div>
+
+<!-- برنامه -->
+<div id="shell">
+  <aside id="side">
+    <div class="brand"><div class="logo">⚡</div><div><div style="font-weight:800;font-size:13px">سینا OS</div>
+      <div class="muted" style="font-size:10px">عامل هوشمند</div></div></div>
+    <nav id="nav"></nav>
+    <div class="who">
+      <div id="who-name" style="font-weight:600">—</div>
+      <div class="row" style="justify-content:space-between;align-items:center;margin-top:6px">
+        <span class="chip" id="health" style="background:rgba(148,163,184,.12)">…</span>
+        <button class="btn" id="logout" style="padding:4px 10px;font-size:11px">خروج</button>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <header>
+      <div><h1 id="page-title">گفتگو با سینا</h1><div class="sub" id="page-sub">هر کاری می‌خواهید بگویید؛ خودش انجام می‌دهد.</div></div>
+      <button class="btn" id="menu-btn" style="display:none">☰</button>
+    </header>
+
+    <!-- چت -->
+    <section id="view-chat">
+      <div class="card">
+        <div class="msgs" id="msgs"></div>
+        <div class="composer">
+          <textarea id="task-input" placeholder="مثال: در ریپازیتوری گیت‌هاب من فایل README را به‌روز کن / فایل اکسل بساز و داده‌ها را تحلیل کن / پیام تست به تلگرام من بفرست"></textarea>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="btn primary" id="send-btn" style="padding:12px 18px">ارسال</button>
+            <button class="btn" id="clear-btn" style="font-size:11px">پاک‌کردن</button>
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px;flex-wrap:wrap">
+          <span class="muted">نمونه‌ها:</span>
+          <button class="btn ex" style="padding:3px 10px;font-size:11px">یک فایل CSV از فروش بساز و خلاصه تحلیل کن</button>
+          <button class="btn ex" style="padding:3px 10px;font-size:11px">با http_api ریپازیتوری‌های گیت‌هابم را لیست کن</button>
+          <button class="btn ex" style="padding:3px 10px;font-size:11px">با search_api جدیدترین اخبار هوش مصنوعی را پیدا کن</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- کارها -->
+    <section id="view-tasks" style="display:none">
+      <div class="card" style="padding:8px 6px">
+        <table><thead><tr><th>عنوان</th><th>وضعیت</th><th>مدل/توکن‌ها</th><th>زمان</th><th></th></tr></thead>
+        <tbody id="tasks-body"></tbody></table>
+      </div>
+    </section>
+
+    <!-- اتصال‌ها -->
+    <section id="view-integrations" style="display:none">
+      <div class="row" style="margin-bottom:12px;flex-wrap:wrap;align-items:center">
+        <input id="prov-search" class="input" style="max-width:280px" placeholder="جست‌وجوی سرویس… (مثلاً notion)">
+        <select id="prov-cat" class="input" style="max-width:220px"></select>
+        <span class="muted" id="prov-count"></span>
+      </div>
+      <div class="grid" id="prov-grid" style="grid-template-columns:repeat(auto-fill,minmax(232px,1fr))"></div>
+    </section>
+
+    <!-- مدل و تنظیمات -->
+    <section id="view-settings" style="display:none">
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+        <div class="card">
+          <h3 style="margin:0 0 12px;font-size:14px">مدل‌ها</h3>
+          <div class="grid">
+            <div><label class="label">مدل پیش‌فرض</label><input id="m-default" class="input" dir="ltr"></div>
+            <div><label class="label">مدل کدنویسی</label><input id="m-coding" class="input" dir="ltr"></div>
+            <div><label class="label">مدل استدلال</label><input id="m-reason" class="input" dir="ltr"></div>
+            <button class="btn primary" id="m-save">ذخیره</button>
+            <p class="muted">مدل‌های رایگان OpenRouter با پسوند <span class="mono">:free</span> کار می‌کنند.</p>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="margin:0 0 12px;font-size:14px">سیستم</h3>
+          <pre id="sys-info" class="mono" style="white-space:pre-wrap;margin:0"></pre>
+        </div>
+        <div class="card">
+          <h3 style="margin:0 0 12px;font-size:14px">مصرف</h3>
+          <div id="usage-info" class="mono" style="white-space:pre-wrap"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div class="toast" id="toast"></div>
+</div>
+
+<div id="modal"><div class="card" id="modal-body"></div></div>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const API = "";
+let TOKEN = localStorage.getItem("sina_token") || "";
+let USER = JSON.parse(localStorage.getItem("sina_user") || "null");
+let CATALOG = [], CONNECTED = {}, currentTask = null, es = null;
+
+function toast(msg, ms = 3200) {
+  const t = $("#toast"); t.textContent = msg; t.style.display = "block";
+  clearTimeout(t._t); t._t = setTimeout(() => (t.style.display = "none"), ms);
+}
+async function api(path, init = {}) {
+  const headers = { "Content-Type": "application/json", ...(init.headers || {}) };
+  if (TOKEN) headers.Authorization = "Bearer " + TOKEN;
+  const res = await fetch(API + "/api" + path, { ...init, headers });
+  const text = await res.text();
+  let data = null; try { data = text ? JSON.parse(text) : null; } catch { data = { detail: text }; }
+  if (!res.ok) {
+    if (res.status === 401) { logout(); }
+    const msg = typeof data?.detail === "string" ? data.detail : JSON.stringify(data?.detail ?? data);
+    throw new Error(msg || ("خطای " + res.status));
+  }
+  return data;
+}
+const fa = (n) => new Intl.NumberFormat("fa-IR").format(n || 0);
+const fmtDate = (d) => d ? new Intl.DateTimeFormat("fa-IR", { dateStyle: "short", timeStyle: "short" }).format(new Date(d)) : "—";
+const STATUS = { queued: "در صف", running: "در حال اجرا", waiting_approval: "در انتظار تأیید",
+  completed: "تکمیل‌شده", failed: "ناموفق", cancelled: "لغوشده" };
+const STATUS_COLOR = { queued: "#fbbf24", running: "#818cf8", waiting_approval: "#fb923c",
+  completed: "#34d399", failed: "#fb7185", cancelled: "#94a3b8" };
+
+/* ---------------- auth ---------------- */
+async function logout() {
+  TOKEN = ""; USER = null;
+  localStorage.removeItem("sina_token"); localStorage.removeItem("sina_user");
+  $("#shell").style.display = "none"; $("#login").style.display = "grid";
+}
+$("#li-btn").onclick = async () => {
+  $("#li-err").style.display = "none";
+  try {
+    const r = await api("/auth/login", { method: "POST", body: JSON.stringify({
+      email: $("#li-email").value.trim(), password: $("#li-pass").value }) });
+    TOKEN = r.access_token; USER = r.user;
+    localStorage.setItem("sina_token", TOKEN); localStorage.setItem("sina_user", JSON.stringify(USER));
+    boot();
+  } catch (e) { $("#li-err").textContent = e.message; $("#li-err").style.display = "block"; }
+};
+$("#li-pass").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#li-btn").click(); });
+$("#logout").onclick = logout;
+
+/* ---------------- nav ---------------- */
+const PAGES = [
+  ["chat", "گفتگو با سینا", "⚡", "هر کاری می‌خواهید بگویید؛ خودش انجام می‌دهد."],
+  ["tasks", "کارها", "✅", "تاریخچهٔ اجراها، وضعیت و خروجی."],
+  ["integrations", "اتصال‌ها", "🔌", "توکن سرویس‌های خودتان — رمزنگاری‌شده روی همین سیستم."],
+  ["settings", "مدل و سیستم", "⚙️", "مدل‌های پیش‌فرض، مصرف و وضعیت سرور."],
+];
+function buildNav() {
+  $("#nav").innerHTML = "";
+  PAGES.forEach(([k, label, icon]) => {
+    const b = document.createElement("button");
+    b.dataset.page = k; b.innerHTML = `<span>${icon}</span><span>${label}</span>`;
+    b.onclick = () => go(k);
+    $("#nav").appendChild(b);
+  });
+}
+function go(page) {
+  PAGES.forEach(([k]) => { $("#view-" + k).style.display = k === page ? "block" : "none"; });
+  $$("#nav button").forEach((b) => b.classList.toggle("active", b.dataset.page === page));
+  const p = PAGES.find((x) => x[0] === page);
+  $("#page-title").textContent = p ? p[1] : ""; $("#page-sub").textContent = p ? p[3] : "";
+  $("#side").classList.remove("open");
+  if (page === "tasks") loadTasks();
+  if (page === "integrations") loadIntegrations();
+  if (page === "settings") loadSettings();
+}
+
+/* ---------------- health ---------------- */
+async function health() {
+  try {
+    const h = await api("/health");
+    const el = $("#health");
+    el.textContent = h.status === "ok" ? "متصل" : "قطع";
+    el.style.background = h.status === "ok" ? "rgba(52,211,153,.14)" : "rgba(251,113,133,.14)";
+    el.style.color = h.status === "ok" ? "#6ee7b7" : "#fda4af";
+  } catch { }
+}
+
+/* ---------------- chat / tasks ---------------- */
+function addMsg(kind, html) {
+  const d = document.createElement("div");
+  d.className = "msg " + kind; d.innerHTML = html;
+  $("#msgs").appendChild(d);
+  $("#msgs").scrollTop = $("#msgs").scrollHeight;
+  return d;
+}
+async function sendTask(text) {
+  const instruction = (text || $("#task-input").value).trim();
+  if (!instruction) return;
+  $("#task-input").value = "";
+  addMsg("user", escapeHtml(instruction));
+  const box = addMsg("bot", `<span class="muted">در حال برنامه‌ریزی…</span>`);
+  $("#send-btn").disabled = true;
+  try {
+    const r = await api("/tasks", { method: "POST", body: JSON.stringify({ instruction }) });
+    const id = r.task.id;
+    streamTask(id, box);
+  } catch (e) {
+    box.innerHTML = `<span style="color:#fda4af">${escapeHtml(e.message)}</span>`;
+    $("#send-btn").disabled = false;
+  }
+}
+function streamTask(id, box) {
+  if (es) { es.close(); es = null; }
+  const steps = [];
+  const render = () => {
+    box.innerHTML = steps.map((s) => {
+      if (s.type === "step") return `<div class="step">${s.icon} ${escapeHtml(s.text)}</div>`;
+      if (s.type === "tool") return `<div class="tool">🛠 ${escapeHtml(s.text)}</div>`;
+      return `<div style="margin-top:6px">${s.text}</div>`;
+    }).join("");
+    $("#msgs").scrollTop = $("#msgs").scrollHeight;
+  };
+  steps.push({ type: "step", icon: "⏳", text: "کار ثبت شد…" }); render();
+  es = new EventSource(`${API}/api/tasks/${id}/events?token=${encodeURIComponent(TOKEN)}`);
+  es.onmessage = async (ev) => {
+    let e; try { e = JSON.parse(ev.data); } catch { return; }
+    const type = e.event || e.type, data = e.data || {};
+    if (type === "task.step") steps.push({ type: "step", icon: data.status === "error" ? "✗" : "✓", text: data.summary || data.phase });
+    else if (type === "task.plan") steps.push({ type: "step", icon: "🗺", text: "برنامه ریخته شد" });
+    else if (type === "task.tool") steps.push({ type: "tool", text: (data.tool || data.name || "ابزار") });
+    else if (type === "task.status") {
+      if (["completed", "failed", "cancelled", "waiting_approval"].includes(data.status)) { es.close(); es = null; finish(id, box, steps, data.status); }
+    }
+    render();
+  };
+  es.onerror = () => { if (es) { es.close(); es = null; finish(id, box, steps, null); } };
+}
+async function finish(id, box, steps, status) {
+  try {
+    const t = await api("/tasks/" + id);
+    if (t.status === "waiting_approval") {
+      const ap = (t.approvals || []).find((a) => a.status === "pending");
+      steps.push({ type: "raw", text: `<div style="background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.35);border-radius:12px;padding:10px;margin-top:8px">
+        <div style="font-size:12.5px;margin-bottom:8px">🔐 این مرحله نیاز به تأیید شما دارد:<br><span class="muted">${escapeHtml(ap?.description || "عملیات حساس")}</span></div>
+        <div class="row"><button class="btn primary" onclick="decide('${id}','${ap?.id}',true)">تأیید و ادامه</button>
+        <button class="btn danger" onclick="decide('${id}','${ap?.id}',false)">رد</button></div></div>` });
+    } else {
+      const out = t.result || t.error || "(بدون خروجی)";
+      steps.push({ type: "raw", text: `<div style="border-top:1px solid rgba(255,255,255,.08);padding-top:8px;margin-top:8px">${escapeHtml(out).slice(0, 8000)}</div>` });
+      if (t.status === "failed") steps.unshift({ type: "step", icon: "✗", text: t.error || "ناموفق" });
+    }
+    box.innerHTML = steps.map((s) => s.type === "step" ? `<div class="step">${s.icon} ${escapeHtml(s.text)}</div>`
+      : s.type === "tool" ? `<div class="tool">🛠 ${escapeHtml(s.text)}</div>` : s.text).join("");
+  } catch (e) { steps.push({ type: "raw", text: escapeHtml(e.message) }); }
+  $("#send-btn").disabled = false;
+  $("#msgs").scrollTop = $("#msgs").scrollHeight;
+  loadTasks();
+}
+async function decide(taskId, approvalId, approve) {
+  try {
+    await api(`/tasks/${taskId}/approvals/${approvalId}`, { method: "POST", body: JSON.stringify({ approve }) });
+    toast(approve ? "تأیید شد — ادامه می‌دهد…" : "رد شد.");
+    const box = $(".msgs").lastElementChild;
+    if (box) streamTask(taskId, box);
+  } catch (e) { toast(e.message); }
+}
+$("#send-btn").onclick = () => sendTask();
+$("#task-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) sendTask();
+});
+$("#clear-btn").onclick = () => { $("#msgs").innerHTML = ""; };
+$$(".ex").forEach((b) => (b.onclick = () => sendTask(b.textContent)));
+
+async function loadTasks() {
+  try {
+    const rows = await api("/tasks?limit=40");
+    $("#tasks-body").innerHTML = rows.map((t) => `<tr>
+      <td style="max-width:420px"><div style="font-weight:500">${escapeHtml(t.title)}</div>
+        <div class="muted" style="font-size:10.5px" dir="ltr">${t.id.slice(0, 8)}</div></td>
+      <td><span class="chip" style="background:${STATUS_COLOR[t.status]}22;color:${STATUS_COLOR[t.status]}">${STATUS[t.status] || t.status}</span></td>
+      <td class="muted">${fa(t.tokens_in)} / ${fa(t.tokens_out)}</td>
+      <td class="muted">${fmtDate(t.created_at)}</td>
+      <td><button class="btn" style="padding:3px 9px;font-size:11px" onclick="showTask('${t.id}')">جزئیات</button></td>
+    </tr>`).join("") || `<tr><td colspan="5" class="muted" style="text-align:center;padding:18px">کاری ثبت نشده</td></tr>`;
+  } catch (e) { toast(e.message); }
+}
+window.showTask = async (id) => {
+  const t = await api("/tasks/" + id);
+  const steps = (t.steps || []).map((s) => `[${s.phase}] ${s.summary}`).join("\n");
+  const calls = (t.tool_calls || []).map((c) => `${c.tool} — ${c.status} ${JSON.stringify(c.args).slice(0, 120)}`).join("\n");
+  openModal(`<h3 style="margin:0 0 10px;font-size:14px">${escapeHtml(t.title)}</h3>
+    <p class="muted">وضعیت: ${STATUS[t.status] || t.status} · توکن ${fa(t.tokens_in)}/${fa(t.tokens_out)}</p>
+    <h4 style="font-size:12.5px;margin:12px 0 4px">مراحل</h4><pre class="mono" style="white-space:pre-wrap">${escapeHtml(steps || "—")}</pre>
+    <h4 style="font-size:12.5px;margin:12px 0 4px">ابزارها</h4><pre class="mono" style="white-space:pre-wrap">${escapeHtml(calls || "—")}</pre>
+    <h4 style="font-size:12.5px;margin:12px 0 4px">خروجی</h4><pre class="mono" style="white-space:pre-wrap">${escapeHtml((t.result || t.error || "—").slice(0, 6000))}</pre>
+    <div class="row" style="margin-top:12px"><button class="btn" onclick="closeModal()">بستن</button></div>`);
+};
+
+/* ---------------- integrations ---------------- */
+async function loadIntegrations() {
+  try {
+    const [cat, conn] = await Promise.all([api("/integrations/catalog"), api("/integrations")]);
+    CATALOG = cat.providers; CONNECTED = conn;
+    const sel = $("#prov-cat");
+    if (!sel.dataset.done) {
+      sel.innerHTML = `<option value="">همهٔ دسته‌ها</option>` +
+        Object.entries(cat.categories).map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
+      sel.dataset.done = "1";
+      sel.onchange = renderProviders; $("#prov-search").oninput = renderProviders;
+    }
+    renderProviders();
+  } catch (e) { toast(e.message); }
+}
+function renderProviders() {
+  const q = $("#prov-search").value.trim().toLowerCase();
+  const cat = $("#prov-cat").value;
+  const items = CATALOG.filter((p) => (!cat || p.category === cat) &&
+    (!q || p.name.toLowerCase().includes(q) || p.key.includes(q)));
+  $("#prov-count").textContent = `${items.length} سرویس`;
+  $("#prov-grid").innerHTML = items.map((p) => {
+    const c = CONNECTED[p.key];
+    const on = c && c.configured;
+    return `<div class="prov ${on ? "on" : ""}" onclick='openProvider(${JSON.stringify(p.key)})'>
+      <div class="row" style="justify-content:space-between;align-items:flex-start">
+        <div><div style="font-weight:600;font-size:13px">${escapeHtml(p.name)}</div>
+          <div class="muted" style="font-size:10.5px" dir="ltr">${p.key}</div></div>
+        <span class="chip" style="background:${on ? "rgba(52,211,153,.14)" : "rgba(148,163,184,.12)"};color:${on ? "#6ee7b7" : "#94a3b8"}">
+          ${on ? "متصل" : "خالی"}</span>
+      </div>
+      <div class="muted" style="font-size:11px;margin-top:8px">${(p.actions && Object.keys(p.actions).length) ? "عملیات: " + Object.keys(p.actions).slice(0, 3).join("، ") : "دسترسی عمومی REST"}</div>
+    </div>`;
+  }).join("");
+}
+window.openProvider = (key) => {
+  const p = CATALOG.find((x) => x.key === key);
+  if (!p) return;
+  const c = CONNECTED[key] || {};
+  const configured = c.fields_configured || [];
+  openModal(`<h3 style="margin:0;font-size:15px">${escapeHtml(p.name)}</h3>
+    <p class="muted" style="margin:6px 0 14px">${escapeHtml(p.note || "")}</p>
+    <div class="grid">
+      ${p.fields.filter((f) => f !== "none").map((f) => `<div>
+        <label class="label">${f} ${configured.includes(f) ? '<span style="color:#6ee7b7">(ذخیره شده)</span>' : ""}</label>
+        <input class="input" dir="ltr" data-field="${f}" placeholder="${configured.includes(f) ? "برای تغییر مقدار جدید بدهید" : ""}">
+      </div>`).join("")}
+    </div>
+    <div class="row" style="margin-top:14px;flex-wrap:wrap">
+      <button class="btn primary" onclick="saveProvider('${p.key}')">ذخیره</button>
+      ${c.configured ? `<button class="btn danger" onclick="deleteProvider('${p.key}')">حذف اتصال</button>` : ""}
+      <a class="btn" href="${p.docs}" target="_blank" rel="noopener">گرفتن توکن ↗</a>
+      <button class="btn" onclick="closeModal()">بستن</button>
+    </div>`);
+};
+window.saveProvider = async (key) => {
+  const cfg = {};
+  $$("#modal [data-field]").forEach((i) => { if (i.value.trim()) cfg[i.dataset.field] = i.value.trim(); });
+  if (!Object.keys(cfg).length) return toast("چیزی وارد نکردید");
+  try {
+    await api("/integrations", { method: "POST", body: JSON.stringify({ kind: key, config: cfg, enabled: true }) });
+    closeModal(); toast("ذخیره شد ✓"); loadIntegrations();
+  } catch (e) { toast(e.message); }
+};
+window.deleteProvider = async (key) => {
+  try { await api("/integrations/" + key, { method: "DELETE" }); closeModal(); toast("حذف شد"); loadIntegrations(); }
+  catch (e) { toast(e.message); }
+};
+
+/* ---------------- settings ---------------- */
+async function loadSettings() {
+  try {
+    const [s, sys, usage] = await Promise.all([api("/settings"), api("/system/stats"), api("/usage/summary?days=30")]);
+    $("#m-default").value = s.models.default || ""; $("#m-coding").value = s.models.coding || "";
+    $("#m-reason").value = s.models.reasoning || "";
+    $("#sys-info").textContent = JSON.stringify({
+      نسخه: s.app.name, محیط: s.app.env, "provider": s.provider_configured ? "openrouter" : "mock",
+      حداکثر_تکرار: s.limits.max_agent_iterations, ابزارها: s.limits.max_tool_calls,
+      "سطح تأیید": s.limits.approval_levels.join(", "),
+    }, null, 1) + "\n\n" + JSON.stringify(sys, null, 1).slice(0, 1200);
+    $("#usage-info").textContent = JSON.stringify(usage.totals, null, 1) +
+      "\n\n" + (usage.by_model || []).slice(0, 8).map((m) => `${m.model}: ${m.calls} تماس`).join("\n");
+  } catch (e) { toast(e.message); }
+}
+$("#m-save").onclick = async () => {
+  try {
+    await api("/models", { method: "POST", body: JSON.stringify({
+      default_model: $("#m-default").value.trim(), coding_model: $("#m-coding").value.trim(),
+      reasoning_model: $("#m-reason").value.trim() }) });
+    toast("ذخیره شد ✓");
+  } catch (e) { toast(e.message); }
+};
+
+/* ---------------- modal & boot ---------------- */
+function openModal(html) { $("#modal-body").innerHTML = html; $("#modal").style.display = "grid"; }
+window.closeModal = () => ($("#modal").style.display = "none");
+$("#modal").onclick = (e) => { if (e.target.id === "modal") closeModal(); };
+function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+async function boot() {
+  $("#login").style.display = "none"; $("#shell").style.display = "block";
+  buildNav(); go("chat"); health();
+  setInterval(health, 30000);
+  try {
+    const me = await api("/auth/me");
+    $("#who-name").textContent = me.name || me.email;
+  } catch { }
+}
+if (TOKEN) boot(); else $("#login").style.display = "grid";
+</script>
+</body>
+</html>

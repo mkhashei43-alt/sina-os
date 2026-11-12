@@ -1,0 +1,169 @@
+# Sina AI OS — production-ish compose stack
+#   cp .env.example .env && edit secrets, then:  docker compose up -d
+name: sina-ai-os
+
+x-backend-env: &backend-env
+  ENV: prod
+  AUTO_CREATE_TABLES: ${AUTO_CREATE_TABLES:-false}
+  PLATFORM_ADMIN_EMAILS: ${PLATFORM_ADMIN_EMAILS:-}
+  SIGNUP_ENABLED: ${SIGNUP_ENABLED:-true}
+  SIGNUP_TRIAL_DAYS: ${SIGNUP_TRIAL_DAYS:-7}
+  SALES_BRAND: ${SALES_BRAND:-سینا کلود}
+  SUPPORT_TELEGRAM: ${SUPPORT_TELEGRAM:-}
+  SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
+  RATE_LIMIT_SIGNUP_PER_MIN: ${RATE_LIMIT_SIGNUP_PER_MIN:-5}
+  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-sina}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-sina}
+  REDIS_URL: redis://redis:6379/0
+  WORKSPACE_ROOT: /data/sina-ai
+  JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+  ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@sina.local}
+  ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}
+  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+  DEFAULT_MODEL: ${DEFAULT_MODEL:-openai/gpt-4o-mini}
+  CODING_MODEL: ${CODING_MODEL:-anthropic/claude-sonnet-4.5}
+  REASONING_MODEL: ${REASONING_MODEL:-openai/o3-mini}
+  EMBEDDINGS_BASE_URL: ${EMBEDDINGS_BASE_URL:-}
+  EMBEDDINGS_API_KEY: ${EMBEDDINGS_API_KEY:-}
+  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+  TELEGRAM_ALLOWED_IDS: ${TELEGRAM_ALLOWED_IDS:-}
+  SECRETS_ENCRYPTION_KEY: ${SECRETS_ENCRYPTION_KEY:-}
+  EXEC_MODE: ${EXEC_MODE:-local}
+  EXEC_TIMEOUT_SECONDS: ${EXEC_TIMEOUT_SECONDS:-120}
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sina}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-sina}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sina} -d ${POSTGRES_DB:-sina}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [sina-net]
+    deploy:
+      resources:
+        limits: { memory: 1g }
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks: [sina-net]
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+      SINA_EMBEDDED_WORKER: "0"
+    volumes:
+      - sina-data:/data/sina-ai
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    ports:
+      # host port is configurable: 8000 is already used by another app on this server
+      - "127.0.0.1:${SINA_API_PORT:-18000}:8000"
+    networks: [sina-net]
+    deploy:
+      resources:
+        limits: { cpus: "1.5", memory: 1g }
+
+  worker:
+    build: ./backend
+    restart: unless-stopped
+    command: ["python", "-m", "app.worker"]
+    healthcheck:
+      # the worker exposes no HTTP port — verify the loop process is alive
+      test: ["CMD-SHELL", "grep -aq app.worker /proc/1/cmdline || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    environment:
+      <<: *backend-env
+    volumes:
+      - sina-data:/data/sina-ai
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [sina-net]
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 2g }
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://api:8000
+      NEXT_TELEMETRY_DISABLED: "1"
+    depends_on:
+      api: { condition: service_healthy }
+    ports:
+      - "127.0.0.1:${SINA_WEB_PORT:-13000}:3000"
+    networks: [sina-net]
+    deploy:
+      resources:
+        limits: { memory: 512m }
+
+  telegram:
+    # اختیاری: بدون TELEGRAM_BOT_TOKEN بالا نیاید → docker compose --profile telegram up -d telegram
+    profiles: ["telegram"]
+    build: ./backend
+    restart: unless-stopped
+    command: ["python", "-m", "app.bot.telegram_bot"]
+    healthcheck:
+      test: ["CMD-SHELL", "grep -aq app.bot.telegram_bot /proc/1/cmdline || exit 1"]
+      interval: 60s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    environment:
+      <<: *backend-env
+      SINA_API_URL: http://api:8000
+      TELEGRAM_BOT_EMAIL: ${ADMIN_EMAIL:-admin@sina.local}
+      TELEGRAM_BOT_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}
+    depends_on:
+      api: { condition: service_healthy }
+    networks: [sina-net]
+    deploy:
+      resources:
+        limits: { memory: 256m }
+
+  # Optional reverse proxy (put your real domain + TLS certs in deploy/nginx)
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    profiles: ["proxy"]
+    volumes:
+      - ./deploy/nginx/sina.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/nginx/certs:/etc/nginx/certs:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on: [api, frontend]
+    networks: [sina-net]
+
+networks:
+  sina-net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:
+  sina-data:

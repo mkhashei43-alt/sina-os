@@ -1,0 +1,30 @@
+# اجرای سریع با داکر (اختیاری) — روی ویندوز/مک/لینوکس یکسان
+#   docker compose -f docker-compose.oss.yml up -d
+#   سپس http://localhost:8765
+services:
+  sina:
+    build: ./backend
+    container_name: sina-os
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8765:8000"
+    environment:
+      ENV: local
+      AUTO_CREATE_TABLES: "true"
+      SERVE_CONSOLE: "true"
+      DATABASE_URL: sqlite+aiosqlite:////data/sina.db
+      WORKSPACE_ROOT: /data/sina-ai
+      JWT_SECRET: ${JWT_SECRET:?یک مقدار تصادفی در .env بگذارید}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@sina.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?رمز مدیر را در .env بگذارید}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+    volumes:
+      - sina-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status==200 else 1)\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+volumes:
+  sina-data:
