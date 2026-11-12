@@ -16,20 +16,20 @@
 
 ### ویندوز
 ```powershell
-git clone https://github.com/USERNAME/sina-os && cd sina-os
+git clone https://github.com/mkhashei43-alt/sina-os && cd sina-os
 sina.cmd
 ```
 یا فقط روی `sina.bat` دابل‌کلیک کنید.
 
 ### macOS
 ```bash
-git clone https://github.com/USERNAME/sina-os && cd sina-os
+git clone https://github.com/mkhashei43-alt/sina-os && cd sina-os
 ./sina.sh          # یا دابل‌کلیک روی sina.command
 ```
 
 ### Linux
 ```bash
-git clone https://github.com/USERNAME/sina-os && cd sina-os
+git clone https://github.com/mkhashei43-alt/sina-os && cd sina-os
 ./sina.sh
 ```
 
