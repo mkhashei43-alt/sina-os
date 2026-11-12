@@ -5,7 +5,7 @@
 **به فارسی بگویید چه می‌خواهید؛ خودش انجام می‌دهد.**
 روی کامپیوتر خودتان اجرا می‌شود، با **توکن‌های خودتان**، بدون وابستگی به هیچ سرویس ابریِ اجباری.
 
-[![CI](https://github.com/mkhashei43-alt/sina-os/actions/workflows/ci.yml/badge.svg)](../../actions)
+[![CI](https://github.com/mkhashei43-alt/sina-os/actions/workflows/ci.yml/badge.svg)](https://github.com/mkhashei43-alt/sina-os/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#-نصب-در-یک-دستور)
